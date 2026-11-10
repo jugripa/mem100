@@ -25,7 +25,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent
 SYNC_STATE_PATH = BASE_DIR / "memory" / "sync_state.json"
-DEFAULT_WORKSPACE = os.environ.get("ANTIGRAVITY_WORKSPACE", BASE_DIR.name)
+DEFAULT_WORKSPACE = os.environ.get("ANTIGRAVITY_WORKSPACE", str(BASE_DIR.resolve()))
 
 ANTIGRAVITY_ROOTS = [
     Path.home() / ".gemini" / "antigravity",
@@ -204,28 +204,28 @@ def check_workspace_match(root_dir: Path, conv_id: str, transcript_path: Path, f
 
     if not detected_ws:
         if transcript_path.exists():
+            boundary_token = "/" + filter_str.strip("/")
             try:
                 with open(transcript_path, "r", encoding="utf-8", errors="ignore") as f:
                     for _ in range(60):
                         line = f.readline()
                         if not line:
                             break
-                        if filter_str in line or urllib.parse.quote(filter_str) in line:
+                        if boundary_token in line or urllib.parse.quote(boundary_token) in line:
                             return True, "transcript_content_match"
             except Exception:
                 pass
         return False, "None"
 
+    filter_norm = filter_str.replace("file://", "").rstrip("/")
     for ws in detected_ws:
-        ws_unquoted = urllib.parse.unquote(ws)
-        if filter_str in ws or filter_str in ws_unquoted:
-            return True, str(detected_ws)
-        try:
-            ws_path = Path(ws_unquoted.replace("file://", ""))
-            if ws_path.name == filter_str or str(ws_path) == filter_str:
+        ws_unquoted = urllib.parse.unquote(ws).replace("file://", "").strip('"').rstrip("/")
+        if "/" in filter_norm:
+            if ws_unquoted == filter_norm or ws_unquoted.startswith(filter_norm + "/"):
                 return True, str(detected_ws)
-        except Exception:
-            pass
+        else:
+            if Path(ws_unquoted).name == filter_norm:
+                return True, str(detected_ws)
 
     return False, str(detected_ws)
 

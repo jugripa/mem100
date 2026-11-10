@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 - **Slimmed `.agents/rules/memory-governance.md` & `AGENTS.md` Integration:** Reduced `memory-governance.md` to a concise 12-line session rule enforcing Turn-1 `context` loading, task-arrival `query` retrieval, and the read-only session boundary, keeping host `AGENTS.md` files as pure 1-line indices.
 
+### Fixed
+- **Strict Workspace Boundary Matching in `harvest_conversations.py`:** Enforced exact path token and slash boundary matching so target workspaces (e.g. `Executive Assistant`) never falsely match substring parent/peer paths (e.g. `PM TK Executive Assistant`).
+
 ### Removed
 - **Retired `decisions/log.md`:** Removed standalone `decisions/log.md` ledger as all architectural, product, and rule decisions are stored natively with full context and pointers inside `memory/long-term.jsonl` and `memory/short-term.jsonl` (`atoms.decisions_and_why`).
 - **Retired `memory/PENDING_REVIEW.md` & `memory-human-review`:** Removed `memory/PENDING_REVIEW.md`, `.agents/skills/memory-human-review/SKILL.md`, and the `stage-ambiguity` / `resolve-ambiguity` subcommands in `scripts/manage_memory.py` (obsolete since v1.0.0 eliminated post-LLM Jev gatekeeper quarantines and emergent dimension loops).

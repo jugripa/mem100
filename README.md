@@ -1,7 +1,7 @@
 # MEM100: Autonomous Agent Memory & Continuous Self-Improvement Engine
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![Version](https://img.shields.io/badge/Version-v2.1.0-purple.svg)
+![Version](https://img.shields.io/badge/Version-v1.0.1-purple.svg)
 ![Environment](https://img.shields.io/badge/Harnesses-Antigravity%20%7C%20Claude%20Code%20%7C%20Cursor-orange.svg)
 ![Technologies](https://img.shields.io/badge/Tech-Python%203.10%2B%20%7C%20TypeSafe%20Jev%20%7C%20Okapi%20BM25-green.svg)
 
@@ -22,7 +22,7 @@ Most agent memory systems fail in one of three ways:
 2. **Retrieval Blindspots:** Relying on the agent to "remember to search memory" means memory is almost never consulted unless the user explicitly prompts for it. Or worse, naive keyword search misses relevant memories when phrasing differs.
 3. **Token Bloat at Ingestion:** Running secondary LLM/classifier loops after an LLM has already synthesized a memory wastes tokens and falsely rejects valid context.
 
-### The Unified Two-Tier Solution (v2.0)
+### The Unified Two-Tier Solution (v1.0.1)
 - **Unified Two-Tier JSONL + Markdown Store (Zero Silos):**
   - `memory/long-term.jsonl` (**Core Memory**): Durable domain truths, architectural constraints, active commitments, and policies. Loaded automatically on Turn 1 of every session (`< 4,000` tokens).
   - `memory/short-term.jsonl` (**Working Memory**): Active sprint/work threads, recent decisions, and unresolved open loops. Queried automatically whenever a task or topic arrives.

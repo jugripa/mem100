@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [2.1.0] - 2026-11-09 (Lean Index Governance, `memory-management` Skill & Queue Retirement)
+## [1.0.1] - 2026-11-09 (Lean Index Governance, `memory-management` Skill & Queue Retirement)
 
 ### Added
 - **Dedicated On-Demand Memory Skill (`.agents/skills/memory-management/SKILL.md`):** Extracted the 3-part Pure Signal anatomy, JSONL/dossier schema specification, CLI write commands (`ingest`, `update`, `merge`, `graduate`, `archive`), and upstream maintainer sync protocol into an on-demand skill so normal read-only sessions do not carry write-path prompt bloat.
@@ -16,11 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 - **Retired `decisions/log.md`:** Removed standalone `decisions/log.md` ledger as all architectural, product, and rule decisions are stored natively with full context and pointers inside `memory/long-term.jsonl` and `memory/short-term.jsonl` (`atoms.decisions_and_why`).
-- **Retired `memory/PENDING_REVIEW.md` & `memory-human-review`:** Removed `memory/PENDING_REVIEW.md`, `.agents/skills/memory-human-review/SKILL.md`, and the `stage-ambiguity` / `resolve-ambiguity` subcommands in `scripts/manage_memory.py` (obsolete since v2.0 eliminated post-LLM Jev gatekeeper quarantines and emergent dimension loops).
+- **Retired `memory/PENDING_REVIEW.md` & `memory-human-review`:** Removed `memory/PENDING_REVIEW.md`, `.agents/skills/memory-human-review/SKILL.md`, and the `stage-ambiguity` / `resolve-ambiguity` subcommands in `scripts/manage_memory.py` (obsolete since v1.0.0 eliminated post-LLM Jev gatekeeper quarantines and emergent dimension loops).
 
 ---
 
-## [2.0.0] - 2026-10-26 (Unified Two-Tier Architecture & 1-Call Jev Retrieval)
+## [1.0.0] - 2026-10-26 (Unified Two-Tier Architecture & 1-Call Jev Retrieval)
 
 ### Added
 - **Official Distribution Designation (MEM100):** Designated the autonomous memory and self-improvement engine as **MEM100** for standalone open-source distribution, accompanied by [`EXPERIMENTS.md`](./EXPERIMENTS.md) for long-horizon research tracking.
@@ -54,7 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [1.3.0] - 2026-10-25 (Ingestion Authority Guard, Pure Signal & Routine Cursors)
+## [0.3.0] - 2026-10-25 (Ingestion Authority Guard, Pure Signal & Routine Cursors)
 
 ### Added
 - **Role-Based Ingestion Authority Guard:** Restricted memory write operations (`ingest`, `update`, `merge`, `graduate`, `archive`, `stage-ambiguity`) to authorized consolidation routines (`--routine {dream-cycle,system-improvement,manual-review}`), keeping ad-hoc conversational agents strictly read-only (`context`, `query`, `list`, `audit`).
@@ -69,7 +69,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [1.1.0] - 2026-10-06 (Observability Ledgers & Programmatic Queue Resolution)
+## [0.2.0] - 2026-10-06 (Observability Ledgers & Programmatic Queue Resolution)
 
 ### Added
 - **Weekly Audit Ledgers (`memory/audit/YYYY-W%W.md`, e.g. `2026-W43.md`):** Added human-readable weekly markdown audit tables alongside `memory/audit/raw_events.jsonl`.
@@ -77,7 +77,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [1.0.0] - 2026-09-25 (Initial Autonomous Memory Engine)
+## [0.1.0] - 2026-09-25 (Initial Autonomous Memory Prototype)
 
 ### Added
 - Initial dual-surface storage architecture combining Git-friendly JSONL indices (`short-term.jsonl`, `long-term.jsonl`) with Markdown dossiers (`leaf-files/<id>.md`).

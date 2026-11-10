@@ -1,4 +1,4 @@
-# Advanced Memory & Continuous Self-Improvement Architecture (v2.0)
+# Advanced Memory & Continuous Self-Improvement Architecture (v1.0.1)
 
 Technical specification for implementing a persistent, Git-friendly two-tier JSONL + Markdown memory store, routine-isolated differential cursor indexing, 1-call TypeSafe Jev semantic retrieval with local Okapi BM25 fallback, role-based ingestion authority, and cross-age weekly meta-improvement in autonomous AI agent harnesses.
 

@@ -21,11 +21,10 @@ This skill provides the **interactive human-in-the-loop decision engine** to rev
    ```bash
    python3 scripts/system_improvement.py --days 7 --output sessions/system-improvement-$(date +%F).md
    ```
-3. Parse the report into four review streams:
+3. Parse the report into three review streams:
    - Stream 1: User Friction, Rule Refinement & Context Discovery
    - Stream 2: Recurring Workflows & Skill Proposals
    - Stream 3: Cross-Age Memory Consolidation & Lifecycle (`merge`, `update`, `graduate`, `archive`)
-   - Stream 4: Staged Factual Ambiguities (`memory/PENDING_REVIEW.md`)
 
 ---
 
@@ -33,11 +32,10 @@ This skill provides the **interactive human-in-the-loop decision engine** to rev
 Walk through the items **one by one**:
 1. **Stream 1 (Friction & Context Gaps):** Present the user correction quote, root cause, and proposed surgical rule or `AGENTS.md` pointer update. Ask to Approve, Reject, or Modify.
 2. **Stream 2 (Workflow Repetitions):** Present recurring tool sequences and candidate skill specs. Ask to Approve, Reject, or Defer.
-3. **Stream 3 (Cross-Age Memory Consolidation):** Present proposed `merge`, `update`, `graduate`, and `archive` actions across `short-term.jsonl` and `long-term.jsonl`.
-4. **Stream 4 (Ambiguity Queue):** Hand off to `memory-human-review` if `memory/PENDING_REVIEW.md` has active items.
+3. **Stream 3 (Cross-Age Memory Consolidation):** Present proposed `merge`, `update`, `graduate`, and `archive` actions across `short-term.jsonl` and `long-term.jsonl` (using `.agents/skills/memory-management/SKILL.md`).
 
 ---
 
-### Step 3: Decision Logging
-Log each approved architectural or rule change in `decisions/log.md`:
-`[YYYY-MM-DD] DECISION: ... | REASONING: ... | CONTEXT: Weekly system improvement review.`
+### Step 3: Decision Execution & Audit Trail
+1. Apply approved changes surgically to the target rule, skill, or memory records.
+2. All durable system, product, and architectural decisions are stored in the unified memory store (`memory/long-term.jsonl` and `memory/short-term.jsonl` via `manage_memory.py`). Append a `## Review & Decisions - [YYYY-MM-DD]` section to the `sessions/system-improvement-YYYY-MM-DD.md` report summarizing approved actions.

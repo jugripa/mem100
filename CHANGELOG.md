@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.0] - 2026-11-09 (Lean Index Governance, `memory-management` Skill & Queue Retirement)
+
+### Added
+- **Dedicated On-Demand Memory Skill (`.agents/skills/memory-management/SKILL.md`):** Extracted the 3-part Pure Signal anatomy, JSONL/dossier schema specification, CLI write commands (`ingest`, `update`, `merge`, `graduate`, `archive`), and upstream maintainer sync protocol into an on-demand skill so normal read-only sessions do not carry write-path prompt bloat.
+
+### Changed
+- **Slimmed `.agents/rules/memory-governance.md` & `AGENTS.md` Integration:** Reduced `memory-governance.md` to a concise 12-line session rule enforcing Turn-1 `context` loading, task-arrival `query` retrieval, and the read-only session boundary, keeping host `AGENTS.md` files as pure 1-line indices.
+
+### Removed
+- **Retired `decisions/log.md`:** Removed standalone `decisions/log.md` ledger as all architectural, product, and rule decisions are stored natively with full context and pointers inside `memory/long-term.jsonl` and `memory/short-term.jsonl` (`atoms.decisions_and_why`).
+- **Retired `memory/PENDING_REVIEW.md` & `memory-human-review`:** Removed `memory/PENDING_REVIEW.md`, `.agents/skills/memory-human-review/SKILL.md`, and the `stage-ambiguity` / `resolve-ambiguity` subcommands in `scripts/manage_memory.py` (obsolete since v2.0 eliminated post-LLM Jev gatekeeper quarantines and emergent dimension loops).
+
+---
+
 ## [2.0.0] - 2026-10-26 (Unified Two-Tier Architecture & 1-Call Jev Retrieval)
 
 ### Added

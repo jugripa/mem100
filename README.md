@@ -1,7 +1,7 @@
 # MEM100: Autonomous Agent Memory & Continuous Self-Improvement Engine
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![Version](https://img.shields.io/badge/Version-v2.0.0-purple.svg)
+![Version](https://img.shields.io/badge/Version-v2.1.0-purple.svg)
 ![Environment](https://img.shields.io/badge/Harnesses-Antigravity%20%7C%20Claude%20Code%20%7C%20Cursor-orange.svg)
 ![Technologies](https://img.shields.io/badge/Tech-Python%203.10%2B%20%7C%20TypeSafe%20Jev%20%7C%20Okapi%20BM25-green.svg)
 
@@ -48,23 +48,20 @@ Most agent memory systems fail in one of three ways:
 .
 ├── .agents/
 │   ├── rules/
-│   │   └── memory-governance.md          # Mandatory retrieval & write-authority rules
+│   │   └── memory-governance.md          # Lean read-only session & retrieval reflex rule
 │   ├── skills/
-│   │   ├── memory-human-review/SKILL.md  # Interactive resolution for PENDING_REVIEW.md
+│   │   ├── memory-management/SKILL.md    # On-demand write operations, schema & repo sync skill
 │   │   └── system-review/SKILL.md        # Interactive review for weekly consolidation
 │   └── workflows/
 │       ├── dream-cycle.md                # Daily end-of-day memory consolidation workflow
 │       └── system-improvement.md         # Weekly cross-age consolidation & friction audit
-├── decisions/
-│   └── log.md                            # Append-only ledger of system/rule decisions
 ├── docs/
 │   └── ARCHITECTURE_GUIDE.md             # Deep-dive technical specification & math
 ├── memory/
 │   ├── audit/                            # raw_events.jsonl + YYYY-W%W.md weekly ledgers
 │   ├── leaf-files/                       # Full-context Markdown dossiers (<id>.md)
 │   ├── long-term.jsonl                   # Core Memory (loaded at session start)
-│   ├── short-term.jsonl                  # Working Memory (queried on task arrival)
-│   └── PENDING_REVIEW.md                 # Human review queue for ambiguous facts
+│   └── short-term.jsonl                  # Working Memory (queried on task arrival)
 ├── scripts/
 │   ├── harvest_conversations.py          # Multi-runtime differential transcript harvester
 │   ├── manage_memory.py                  # Core two-tier memory & retrieval CLI engine
@@ -79,10 +76,10 @@ Most agent memory systems fail in one of three ways:
 ## 3. Quickstart & Installation (Drop-In to Any Project)
 
 ### Step 1: Copy Files into Your Agent Workspace
-Copy `scripts/`, `.agents/`, `memory/`, `decisions/`, `docs/`, and `.env.example` into the root of your project repository:
+Copy `scripts/`, `.agents/`, `memory/`, `docs/`, and `.env.example` into the root of your project repository:
 
 ```bash
-cp -r scripts .agents memory decisions docs .env.example /path/to/your-agent-repo/
+cp -r scripts .agents memory docs .env.example /path/to/your-agent-repo/
 cd /path/to/your-agent-repo/
 ```
 
@@ -101,27 +98,13 @@ cp .env.example .env
 python3 scripts/manage_memory.py init
 ```
 
-### Step 4: Add the Memory Reflex to Your `AGENTS.md` / `CLAUDE.md`
-Paste the following section into your root `AGENTS.md` (or `CLAUDE.md` / system prompt):
+### Step 4: Index in Your `AGENTS.md` / `CLAUDE.md`
+Keep your root `AGENTS.md` as a lean index by referencing `.agents/rules/memory-governance.md` (which enforces Turn-1 `context` loading and task-arrival `query` retrieval) while keeping heavy write/consolidation instructions inside `.agents/skills/memory-management/SKILL.md`:
 
 ```markdown
-## Memory Architecture (The Memory Reflex)
-
-This workspace uses a unified two-tier memory system (`scripts/manage_memory.py`) governed by `.agents/rules/memory-governance.md`:
-- `memory/long-term.jsonl` (Core Memory: durable truths, architectural constraints, active commitments, policies).
-- `memory/short-term.jsonl` (Working Memory: active work threads, recent decisions, open loops).
-- `memory/leaf-files/<id>.md` (Markdown context dossiers with source pointers and revision history).
-
-### Mandatory Retrieval Protocol
-1. **Always at Conversation Start (`long-term.jsonl`):** Load core memory on Turn 1 of every session:
-   ```bash
-   python3 scripts/manage_memory.py context
-   ```
-2. **On Every Task or Topic Arrival (`short-term.jsonl` + `long-term.jsonl`):** Whenever a task, feature, bug, or question arrives (or shifts mid-session), query memory before grepping raw logs or guessing:
-   ```bash
-   python3 scripts/manage_memory.py query --task "<specific topic, entity, or request>"
-   ```
-3. **Read-Only Session Boundary:** Normal conversational sessions are strictly read-only (`context`, `query`, `list`, `audit`). Memory writes (`ingest`, `update`, `merge`, `graduate`, `archive`) are restricted to consolidation routines (`.agents/workflows/dream-cycle.md` and `.agents/workflows/system-improvement.md`).
+## Rules & Memory Index
+- @.agents/rules/memory-governance.md -- Mandatory Turn-1 `context` load, task-arrival `query` reflex, and read-only session boundary (`memory/long-term.jsonl`, `memory/short-term.jsonl`).
+- **Memory Management & Workflows:** On-demand mutations via `.agents/skills/memory-management/SKILL.md`; autonomous consolidation via `.agents/workflows/dream-cycle.md` (daily) and `.agents/workflows/system-improvement.md` (weekly).
 ```
 
 ---
@@ -193,24 +176,6 @@ python3 scripts/manage_memory.py archive \
   --routine system-improvement \
   --id mem_20261026090512_82f10b \
   --reason "Open loop resolved and merged in PR-204."
-
-# 10. Stage or Resolve Factual Ambiguities in memory/PENDING_REVIEW.md
-python3 scripts/manage_memory.py stage-ambiguity \
-  --routine dream-cycle \
-  --title "Candidate Title" \
-  --summary "Candidate 3-part summary" \
-  --reason "Conflicting SLA numbers in session transcript" \
-  --question "Is the SLA 24h or 48h?"
-
-python3 scripts/manage_memory.py resolve-ambiguity \
-  --id MEM-REV-20261026120000_a1b2c3 \
-  --action approve \
-  --tier short-term \
-  --importance 0.85 \
-  --title "Optional Corrected Title" \
-  --summary "Optional Corrected 3-Part Summary" \
-  --content "Verified 24h SLA with engineering lead." \
-  --notes "Approved during weekly review."
 ```
 
 ---

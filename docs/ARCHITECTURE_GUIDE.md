@@ -22,16 +22,6 @@ Technical specification for implementing a persistent, Git-friendly two-tier JSO
 └───────────────────────────────────┬─────────────────────────────────────┘
                                     │
                                     ▼ (Role-Based Authority Guard: --routine)
-                  ┌───────────────────────────────────┐
-                  │ Factual Ambiguity Flagged?        │
-                  └────────┬─────────────────┬────────┘
-                      No   │                 │  Yes (--flag-ambiguous / stage-ambiguity)
-                           │                 ▼
-                           │     ┌────────────────────────────────────────┐
-                           │     │ memory/PENDING_REVIEW.md (Human Queue) │
-                           │     │ (Resolved via memory-human-review)     │
-                           │     └────────────────────────────────────────┘
-                           ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │             Working Memory Tier (memory/short-term.jsonl)               │
 │                 + memory/leaf-files/<id>.md dossier                     │
@@ -107,7 +97,6 @@ memory/
 ├── sync_state.json            # Routine-isolated cursors tracking session mtimes & step indexes
 ├── long-term.jsonl            # Active & archived core memories
 ├── short-term.jsonl           # Active, graduated & archived working memories
-├── PENDING_REVIEW.md          # Human review queue for factual/strategic ambiguities
 ├── leaf-files/                # Full-context Markdown dossiers
 │   └── <id>.md
 └── audit/                     # Observability layer
@@ -261,7 +250,7 @@ When `TYPESAFE_API_KEY` is absent, unreachable, or `--offline` is passed:
 
 ## 6. Cross-Age Memory Consolidation & Weekly `system-improvement`
 
-Memories across any age (`short-term.jsonl` and `long-term.jsonl`) can be modified, joined, graduated, archived, or resolved from `PENDING_REVIEW.md` via first-class CLI commands:
+Memories across any age (`short-term.jsonl` and `long-term.jsonl`) can be modified, joined, graduated, or archived via first-class CLI commands:
 
 ```bash
 # 1. Update an existing short-term or long-term record in place
@@ -275,10 +264,6 @@ python3 scripts/manage_memory.py graduate --routine system-improvement --id <MEM
 
 # 4. Archive a resolved or obsolete memory
 python3 scripts/manage_memory.py archive --routine system-improvement --id <MEM_ID> --reason "Resolved in PR #42"
-
-# 5. Stage or resolve factual ambiguities in memory/PENDING_REVIEW.md
-python3 scripts/manage_memory.py stage-ambiguity --routine dream-cycle --title "..." --summary "..." --reason "..."
-python3 scripts/manage_memory.py resolve-ambiguity --id <MEM-REV-ID> --action {approve,reject} [--title "..."] [--summary "..."] [--content "..."] [--notes "..."]
 ```
 
 ### Deterministic Consolidation Brief (`scripts/system_improvement.py`)
@@ -296,9 +281,10 @@ Running `python3 scripts/system_improvement.py` executes in `< 100ms` with zero 
 ## 7. Implementation Checklist for Any Agent Harness
 
 - [x] `scripts/harvest_conversations.py`: Multi-runtime transcript harvester with workspace URI verification, subagent filtering, and routine-isolated differential cursors (`memory/sync_state.json`).
-- [x] `scripts/manage_memory.py`: Unified two-tier JSONL + Markdown dossier engine with `init`, `context`, `query` (1-call Jev + Okapi BM25 fallback), `ingest`, `update`, `merge`, `graduate`, `archive`, `list`, `audit`, `stage-ambiguity`, and `resolve-ambiguity`.
+- [x] `scripts/manage_memory.py`: Unified two-tier JSONL + Markdown dossier engine with `init`, `context`, `query` (1-call Jev + Okapi BM25 fallback), `ingest`, `update`, `merge`, `graduate`, `archive`, `list`, and `audit`.
 - [x] `scripts/system_improvement.py`: Weekly friction auditor and deterministic cross-age memory consolidation analyzer.
-- [x] `.agents/rules/memory-governance.md`: Mandatory startup `context` + task-arrival `query` protocol, read-only session boundary, and 3-part Pure Signal standard.
+- [x] `.agents/rules/memory-governance.md`: Lean mandatory startup `context` + task-arrival `query` protocol and read-only session boundary.
+- [x] `.agents/skills/memory-management/SKILL.md`: On-demand write/consolidation operations, 3-part Pure Signal schema standard, and upstream repository maintenance protocol.
 - [x] `.agents/workflows/dream-cycle.md`: End-of-day consolidation workflow.
 - [x] `.agents/workflows/system-improvement.md`: Weekly cross-age memory consolidation and system tuning workflow.
-- [x] `.agents/skills/memory-human-review/SKILL.md` & `.agents/skills/system-review/SKILL.md`: Interactive human-in-the-loop review skills.
+- [x] `.agents/skills/system-review/SKILL.md`: Interactive human-in-the-loop review skill.

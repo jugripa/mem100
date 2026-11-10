@@ -33,8 +33,6 @@ Usage:
   python3 scripts/manage_memory.py archive --routine system-improvement --id <MEM_ID> [--reason "..."]
   python3 scripts/manage_memory.py list [--tier {short-term,long-term,all}] [--status {active,archived,graduated,all}]
   python3 scripts/manage_memory.py audit [--limit 20]
-  python3 scripts/manage_memory.py stage-ambiguity --routine dream-cycle --title "..." --summary "..." --reason "..."
-  python3 scripts/manage_memory.py resolve-ambiguity --id <MEM-REV-ID> --action {approve,reject} [--title "..."] [--summary "..."] [--content "..."] [--notes "..."]
 """
 import os
 import sys
@@ -53,7 +51,6 @@ MEMORY_DIR = BASE_DIR / "memory"
 SHORT_TERM_PATH = MEMORY_DIR / "short-term.jsonl"
 LONG_TERM_PATH = MEMORY_DIR / "long-term.jsonl"
 LEAF_DIR = MEMORY_DIR / "leaf-files"
-PENDING_REVIEW_PATH = MEMORY_DIR / "PENDING_REVIEW.md"
 AUDIT_DIR = MEMORY_DIR / "audit"
 RAW_AUDIT_LOG = AUDIT_DIR / "raw_events.jsonl"
 API_URL = "https://api.typesafe.ai/v1/systemone"
@@ -383,7 +380,7 @@ def enforce_write_authority(args, operation_name: str = "write"):
     if not getattr(args, "routine", None) and not getattr(args, "allow_adhoc", False):
         print(f"[ERROR] Memory {operation_name.capitalize()} Authority Violation:", file=sys.stderr)
         print("  Ad-hoc session agents are prohibited from mutating memories directly.", file=sys.stderr)
-        print("  Memory writes are restricted to consolidation routines (dream-cycle, system-improvement, manual-review).", file=sys.stderr)
+        print("  Memory writes are restricted to consolidation routines (dream-cycle, system-improvement).", file=sys.stderr)
         print("  Pass --routine <name> or --allow-adhoc if explicitly authorized.", file=sys.stderr)
         sys.exit(1)
 
@@ -561,41 +558,6 @@ def jev_batch_score_records(records: list[dict], task: str, batch_size: int = 55
     return scores
 
 
-def stage_ambiguity_to_markdown(title: str, summary: str, content: str,
-                                conv_id: str, reason: str, question: str = None) -> str:
-    """Stages a genuinely ambiguous candidate memory into memory/PENDING_REVIEW.md."""
-    PENDING_REVIEW_PATH.parent.mkdir(parents=True, exist_ok=True)
-    header_template = (
-        "# Pending Memory Review Queue\n\n"
-        "_Active human review inbox for factual or strategic ambiguities detected during consolidation._\n\n"
-        "---\n\n"
-        "## 1. Ambiguous Memories Awaiting Clarification\n\n"
-    )
-    if not PENDING_REVIEW_PATH.exists():
-        PENDING_REVIEW_PATH.write_text(header_template, encoding="utf-8")
-
-    text = PENDING_REVIEW_PATH.read_text(encoding="utf-8")
-    item_id = f"MEM-REV-{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:6]}"
-
-    entry = (
-        f"\n### [{item_id}] {title}\n"
-        f"- **Source Session:** `{conv_id or 'manual'}`\n"
-        f"- **The Ambiguity:** {reason}\n"
-        f"- **Candidate Summary:** {summary}\n"
-        f"- **Detailed Rationale:** {content or summary}\n"
-        f"- **Question for Human Reviewer:** {question or 'Is this memory accurate as stated, should it be modified, or discarded?'}\n"
-    )
-
-    clean_text = text.replace("_No ambiguous memories currently pending review._\n", "").rstrip()
-    new_text = clean_text + "\n" + entry
-
-    tmp_path = PENDING_REVIEW_PATH.with_suffix(".tmp")
-    tmp_path.write_text(new_text, encoding="utf-8")
-    tmp_path.replace(PENDING_REVIEW_PATH)
-    print(f"  Staged ambiguous candidate [{item_id}] in {PENDING_REVIEW_PATH.relative_to(BASE_DIR)}")
-    return item_id
-
-
 def find_record_across_tiers(mem_id: str) -> tuple[str, int, dict, list[dict]]:
     """
     Finds a memory record by ID across long-term.jsonl and short-term.jsonl.
@@ -627,15 +589,6 @@ def cmd_init(args):
         if not p.exists():
             p.touch()
         print(f"  Verified {p.relative_to(BASE_DIR)}")
-    if not PENDING_REVIEW_PATH.exists():
-        PENDING_REVIEW_PATH.write_text(
-            "# Pending Memory Review Queue\n\n"
-            "_Active human review inbox for factual or strategic ambiguities detected during consolidation._\n\n"
-            "---\n\n"
-            "## 1. Ambiguous Memories Awaiting Clarification\n\n"
-            "_No ambiguous memories currently pending review._\n",
-            encoding="utf-8"
-        )
     print("Unified memory JSONL stores initialized.")
 
 
@@ -678,26 +631,6 @@ def cmd_context(args):
 
 def cmd_ingest(args):
     enforce_write_authority(args, "ingest")
-
-    if args.flag_ambiguous:
-        item_id = stage_ambiguity_to_markdown(
-            title=args.title,
-            summary=args.summary,
-            content=args.content,
-            conv_id=args.conv_id,
-            reason=args.flag_ambiguous,
-            question=args.question
-        )
-        log_observability_event(
-            action="ingest",
-            title=args.title,
-            summary=args.summary,
-            status="STAGED_FOR_HUMAN_REVIEW",
-            importance=float(args.importance or 0.75),
-            mem_id=item_id,
-            conv_id=args.conv_id
-        )
-        return
 
     # Check if --update-id was passed or if an active record has the exact same normalized title
     target_update_id = getattr(args, "update_id", None)
@@ -1285,98 +1218,12 @@ def cmd_audit(args):
         print()
 
 
-def cmd_resolve_ambiguity(args):
-    """Programmatically resolves an ambiguous memory item from PENDING_REVIEW.md."""
-    if not PENDING_REVIEW_PATH.exists():
-        print("Error: memory/PENDING_REVIEW.md does not exist.", file=sys.stderr)
-        sys.exit(1)
-
-    text = PENDING_REVIEW_PATH.read_text(encoding="utf-8")
-    item_id = (getattr(args, "id", None) or getattr(args, "ambiguity_id", "")).strip()
-
-    pattern = re.compile(rf"\n### \[{re.escape(item_id)}\][^\n]*\n([\s\S]*?)(?=\n### \[MEM-REV-|\n---\n|\Z)")
-    match = pattern.search(text)
-    if not match:
-        print(f"Error: Pending memory item '[{item_id}]' not found in memory/PENDING_REVIEW.md.", file=sys.stderr)
-        sys.exit(1)
-
-    block_body = match.group(1)
-    full_block = match.group(0)
-
-    header_m = re.search(rf"### \[{re.escape(item_id)}\]\s+(.*)", full_block)
-    parsed_title = header_m.group(1).strip() if header_m else "Resolved Memory"
-    title = (getattr(args, "title", None) or parsed_title).strip()
-
-    sum_m = re.search(r"-\s+\*\*Candidate Summary:\*\*\s*([\s\S]*?)(?=\n-\s+\*\*Detailed Rationale:\*\*|\n-\s+\*\*Question for (?:Julian|Human Reviewer):\*\*|\Z)", block_body)
-    parsed_summary = sum_m.group(1).strip() if sum_m else parsed_title
-    summary = (getattr(args, "summary", None) or parsed_summary).strip()
-
-    content_m = re.search(r"-\s+\*\*Detailed Rationale:\*\*\s*([\s\S]*?)(?=\n-\s+\*\*Question for (?:Julian|Human Reviewer):\*\*|\Z)", block_body)
-    content = args.content or (content_m.group(1).strip() if content_m else summary)
-
-    conv_m = re.search(r"-\s+\*\*Source Session:\*\*\s+`?([^`\n]+)`?", block_body)
-    conv_id = conv_m.group(1).strip() if conv_m else "manual"
-
-    new_text = text.replace(full_block, "").rstrip() + "\n"
-    if "### [MEM-REV-" not in new_text and "_No ambiguous memories currently pending review._" not in new_text:
-        new_text += "\n_No ambiguous memories currently pending review._\n"
-
-    tmp_path = PENDING_REVIEW_PATH.with_suffix(".tmp")
-    tmp_path.write_text(new_text, encoding="utf-8")
-    tmp_path.replace(PENDING_REVIEW_PATH)
-
-    notes = getattr(args, "notes", None)
-    details_payload = {"resolved_from": item_id}
-    if notes:
-        details_payload["notes"] = notes
-
-    is_reject = getattr(args, "reject", False) or (getattr(args, "action", "approve") == "reject")
-    if is_reject:
-        print(f"[REJECTED] Memory candidate [{item_id}] '{title}' discarded.")
-        log_observability_event(
-            action="resolve-ambiguity",
-            title=title,
-            summary=summary,
-            status="REJECTED_AFTER_HUMAN_REVIEW",
-            importance=0.0,
-            conv_id=conv_id,
-            details=details_payload
-        )
-        return
-
-    tier = getattr(args, "tier", "short-term") or "short-term"
-    importance = float(getattr(args, "importance", None) or 0.80)
-    ingest_ns = argparse.Namespace(
-        routine="manual-review",
-        allow_adhoc=True,
-        title=title,
-        summary=summary,
-        content=content,
-        importance=importance,
-        tier=tier,
-        questions=None,
-        entities=None,
-        people=None,
-        decisions=None,
-        open_loops=None,
-        refs=None,
-        atoms=None,
-        pointers=[f"conv:{conv_id}"] if conv_id != "manual" else [],
-        conv_id=conv_id,
-        metadata=json.dumps(details_payload),
-        flag_ambiguous=None,
-        question=None,
-        update_id=None
-    )
-    cmd_ingest(ingest_ns)
-
-
 def main():
     parser = argparse.ArgumentParser(description="Unified Two-Tier Harness Memory Manager (JSONL-Native).")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # init
-    subparsers.add_parser("init", help="Initialize unified short-term.jsonl, long-term.jsonl, leaf-files/, and PENDING_REVIEW.md.")
+    subparsers.add_parser("init", help="Initialize unified short-term.jsonl, long-term.jsonl, and leaf-files/.")
 
     # context
     p_ctx = subparsers.add_parser("context", help="Load active long-term core memory for mandatory conversation startup grounding.")
@@ -1385,7 +1232,7 @@ def main():
 
     # ingest
     p_ingest = subparsers.add_parser("ingest", help="Ingest a distilled memory record directly into the unified store.")
-    p_ingest.add_argument("--routine", choices=["dream-cycle", "system-improvement", "manual-review"], default=None,
+    p_ingest.add_argument("--routine", choices=["dream-cycle", "system-improvement"], default=None,
                           help="Consolidation routine authorizing this ingestion (required unless --allow-adhoc).")
     p_ingest.add_argument("--allow-adhoc", action="store_true", default=False,
                           help="Explicit override for authorized ad-hoc ingestion.")
@@ -1405,8 +1252,6 @@ def main():
     p_ingest.add_argument("--conv-id", default=None, help="Source conversation ID.")
     p_ingest.add_argument("--update-id", default=None, help="If provided, updates this existing memory ID in place instead of creating a new entry.")
     p_ingest.add_argument("--metadata", default=None, help="Optional JSON string for metadata.")
-    p_ingest.add_argument("--flag-ambiguous", default=None, help="Stage into PENDING_REVIEW.md with the given ambiguity reason.")
-    p_ingest.add_argument("--question", default=None, help="Explicit question for human reviewer when staging ambiguity.")
     # Legacy no-op arguments kept for CLI backward compatibility
     p_ingest.add_argument("--dimension", default=None, help=argparse.SUPPRESS)
     p_ingest.add_argument("--fallback-score", type=float, default=None, help=argparse.SUPPRESS)
@@ -1414,7 +1259,7 @@ def main():
 
     # update
     p_upd = subparsers.add_parser("update", help="Update an existing memory (short-term or long-term, any age) with newer data.")
-    p_upd.add_argument("--routine", choices=["dream-cycle", "system-improvement", "manual-review"], default=None)
+    p_upd.add_argument("--routine", choices=["dream-cycle", "system-improvement"], default=None)
     p_upd.add_argument("--allow-adhoc", action="store_true", default=False)
     p_upd.add_argument("--id", required=True, help="Existing memory ID to update.")
     p_upd.add_argument("--title", default=None)
@@ -1435,7 +1280,7 @@ def main():
 
     # merge
     p_merge = subparsers.add_parser("merge", help="Join and merge multiple memories across any age/tier into a single lean record.")
-    p_merge.add_argument("--routine", choices=["dream-cycle", "system-improvement", "manual-review"], default=None)
+    p_merge.add_argument("--routine", choices=["dream-cycle", "system-improvement"], default=None)
     p_merge.add_argument("--allow-adhoc", action="store_true", default=False)
     p_merge.add_argument("--target-id", required=True, help="Primary memory ID to retain and enrich.")
     p_merge.add_argument("--source-ids", required=True, help="Comma-separated memory IDs to merge into target and archive.")
@@ -1456,7 +1301,7 @@ def main():
 
     # graduate
     p_grad = subparsers.add_parser("graduate", help="Promote an active short-term memory to long-term core memory.")
-    p_grad.add_argument("--routine", choices=["dream-cycle", "system-improvement", "manual-review"], default=None)
+    p_grad.add_argument("--routine", choices=["dream-cycle", "system-improvement"], default=None)
     p_grad.add_argument("--allow-adhoc", action="store_true", default=False)
     p_grad.add_argument("--id", required=True, help="Memory ID to graduate.")
     p_grad.add_argument("--importance", type=float, default=None)
@@ -1465,7 +1310,7 @@ def main():
 
     # archive
     p_arch = subparsers.add_parser("archive", help="Archive a resolved or obsolete memory.")
-    p_arch.add_argument("--routine", choices=["dream-cycle", "system-improvement", "manual-review"], default=None)
+    p_arch.add_argument("--routine", choices=["dream-cycle", "system-improvement"], default=None)
     p_arch.add_argument("--allow-adhoc", action="store_true", default=False)
     p_arch.add_argument("--id", required=True, help="Memory ID to archive.")
     p_arch.add_argument("--reason", default=None, help="Reason for archiving.")
@@ -1493,31 +1338,6 @@ def main():
     p_audit.add_argument("--limit", type=int, default=20, help="Max entries to show.")
     p_audit.add_argument("--dimension", default=None, help=argparse.SUPPRESS)
 
-    # stage-ambiguity
-    p_stage = subparsers.add_parser("stage-ambiguity", help="Stage a genuinely ambiguous memory into memory/PENDING_REVIEW.md.")
-    p_stage.add_argument("--routine", choices=["dream-cycle", "system-improvement", "manual-review"], default=None)
-    p_stage.add_argument("--allow-adhoc", action="store_true", default=False)
-    p_stage.add_argument("--title", required=True)
-    p_stage.add_argument("--summary", required=True)
-    p_stage.add_argument("--reason", required=True)
-    p_stage.add_argument("--content", default=None)
-    p_stage.add_argument("--conv-id", default=None)
-    p_stage.add_argument("--question", default=None)
-    p_stage.add_argument("--dimension", default=None, help=argparse.SUPPRESS)
-
-    # resolve-ambiguity
-    p_resolve_amb = subparsers.add_parser("resolve-ambiguity", help="Resolve and excise an ambiguous memory from PENDING_REVIEW.md.")
-    p_resolve_amb.add_argument("--id", "--ambiguity-id", dest="id", required=True, help="Item ID (e.g. MEM-REV-YYYYMMDDHHMMSS).")
-    p_resolve_amb.add_argument("--action", choices=["approve", "reject"], default="approve")
-    p_resolve_amb.add_argument("--reject", action="store_true")
-    p_resolve_amb.add_argument("--tier", choices=["short-term", "long-term"], default="short-term")
-    p_resolve_amb.add_argument("--importance", type=float, default=0.80)
-    p_resolve_amb.add_argument("--title", default=None, help="Optional enriched/corrected title override.")
-    p_resolve_amb.add_argument("--summary", default=None, help="Optional enriched/corrected summary override.")
-    p_resolve_amb.add_argument("--content", default=None, help="Optional enriched/corrected rationale override.")
-    p_resolve_amb.add_argument("--notes", default=None, help="Optional review notes or rejection reason.")
-    p_resolve_amb.add_argument("--dimension", default=None, help=argparse.SUPPRESS)
-
     args = parser.parse_args()
     if args.command == "init":
         cmd_init(args)
@@ -1539,20 +1359,6 @@ def main():
         cmd_list(args)
     elif args.command == "audit":
         cmd_audit(args)
-    elif args.command == "stage-ambiguity":
-        enforce_write_authority(args, "stage-ambiguity")
-        item_id = stage_ambiguity_to_markdown(args.title, args.summary, args.content, args.conv_id, args.reason, args.question)
-        log_observability_event(
-            action="stage-ambiguity",
-            title=args.title,
-            summary=args.summary,
-            status="STAGED_FOR_HUMAN_REVIEW",
-            importance=0.75,
-            mem_id=item_id,
-            conv_id=args.conv_id
-        )
-    elif args.command == "resolve-ambiguity":
-        cmd_resolve_ambiguity(args)
 
 
 if __name__ == "__main__":

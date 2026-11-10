@@ -74,7 +74,6 @@ Because you (the consolidating LLM) have already read the full transcripts and s
     --pointers "<conv:<id>,task:<id>>" \
     --conv-id "<source_conversation_id>"
   ```
-  *(Use `--flag-ambiguous "<reason>"` only if the conversation contains conflicting unverified facts that require manual human clarification in `memory/PENDING_REVIEW.md`).*
 
 ### Step 4: Memory Consolidation Verification
 Verify that all ingestions and updates are logged in `memory/audit/raw_events.jsonl` and formatted in the weekly audit ledger (`memory/audit/YYYY-W%W.md`, e.g. `memory/audit/2026-W43.md`).
